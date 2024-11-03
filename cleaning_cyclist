@@ -1,0 +1,81 @@
+/*
+#1. Remove all duplicate ride_id enteries
+*/
+DELETE 
+FROM `hybrid-ridge-427702-q5.cyclist.cyclist_dataset_combined`
+WHERE ride_id IN (
+  SELECT ride_id
+  FROM `hybrid-ridge-427702-q5.cyclist.cyclist_dataset_combined`
+  GROUP BY ride_id
+  HAVING COUNT(*) > 1
+)
+
+/*422 rows removed*/
+
+/*
+#2. Find and remove classic/docked bike trips which do not begin or end at a docking station
+*/
+
+DELETE
+FROM `hybrid-ridge-427702-q5.cyclist.cyclist_dataset_combined`
+WHERE rideable_type = "classic_bike" AND
+start_station_name IS NULL
+
+/* 35 rows removed*/
+
+DELETE
+FROM `hybrid-ridge-427702-q5.cyclist.cyclist_dataset_combined`
+WHERE rideable_type = "classic_bike" AND
+start_station_id IS NULL
+
+/* 0 rows removed*/
+
+DELETE
+FROM `hybrid-ridge-427702-q5.cyclist.cyclist_dataset_combined`
+WHERE rideable_type = "classic_bike" AND
+end_station_name IS NULL
+
+/* 7801 rows removed*/
+
+DELETE
+FROM `hybrid-ridge-427702-q5.cyclist.cyclist_dataset_combined`
+WHERE rideable_type = "classic_bike" AND
+end_station_id IS NULL
+
+/* 0 rows removed*/
+
+/*
+#3. Remove rows that do not have a starting/ending latitude and longitude
+*/
+
+DELETE
+FROM `hybrid-ridge-427702-q5.cyclist.cyclist_dataset_combined`
+WHERE start_lat IS NULL OR start_lng IS NULL
+
+DELETE
+FROM `hybrid-ridge-427702-q5.cyclist.cyclist_dataset_combined`
+WHERE end_lat IS NULL OR end_lng IS NULL
+
+/*
+#4 Remove rows when ride time was less than one minute or greater than a 24 hr
+*/
+  
+DELETE
+FROM `hybrid-ridge-427702-q5.cyclist.cyclist_dataset_combined`
+WHERE TIMESTAMP_DIFF(ended_at, started_at, MINUTE) <= 1 OR
+   TIMESTAMP_DIFF(ended_at, started_at, MINUTE) >= 1440;
+
+/* 246999 trips removed*/
+
+/*
+#5 Create a columns for trip duration, day of the week, and month and save results as table
+*/
+
+SELECT*,
+TIMESTAMP_DIFF(ended_at, started_at, MINUTE) AS duration_minutes,
+format_date('%A', started_at) AS day_of_week,
+format_date('%B', started_at) AS month,
+FROM `hybrid-ridge-427702-q5.cyclist.cyclist_dataset_combined`
+
+
+
