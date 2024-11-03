@@ -1,0 +1,127 @@
+Combine 21 months of data into one table (query below)
+
+CREATE TABLE cyclist.cyclist_dataset_combined as (
+  SELECT* FROM `hybrid-ridge-427702-q5.cyclist.subset-202310` union all
+  SELECT* FROM `hybrid-ridge-427702-q5.cyclist.subset-202311` union all
+  SELECT* FROM `hybrid-ridge-427702-q5.cyclist.subset-202312` union all
+  SELECT* FROM `hybrid-ridge-427702-q5.cyclist.subset-202401` union all
+  SELECT* FROM `hybrid-ridge-427702-q5.cyclist.subset-202402` union all
+  SELECT* FROM `hybrid-ridge-427702-q5.cyclist.subset-202403` union all
+  SELECT* FROM `hybrid-ridge-427702-q5.cyclist.subset-202404` union all
+  SELECT* FROM `hybrid-ridge-427702-q5.cyclist.subset-202405` union all
+  SELECT* FROM `hybrid-ridge-427702-q5.cyclist.subset-202406` union all
+  SELECT* FROM `hybrid-ridge-427702-q5.cyclist.subset-202407` union all
+  SELECT* FROM `hybrid-ridge-427702-q5.cyclist.subset-202408` union all
+  SELECT* FROM `hybrid-ridge-427702-q5.cyclist.subset-202409`
+);
+
+Then I did some preliminary cleaning of my data in order to organize and understand:
+
+/* #1 Check length combinations for ride_id and confirm values are unique as ride_id is a primary key
+*/
+
+SELECT LENGTH(ride_id), count(*)
+FROM `hybrid-ridge-427702-q5.cyclist.cyclist_dataset_combined`
+GROUP BY LENGTH(ride_id);
+
+SELECT COUNT (DISTINCT ride_id)
+FROM `hybrid-ridge-427702-q5.cyclist.cyclist_dataset_combined`
+
+/* all enteries for ride_id are 16 charaters long. 211 ride_id's are not DISTINCT and duplicates/nulls need to be adjusted/removed*/
+
+/*2 find all ride_id enteries that are not distinct */
+
+SELECT ride_id
+FROM `hybrid-ridge-427702-q5.cyclist.cyclist_dataset_combined`
+GROUP BY ride_id
+HAVING ( COUNT(*) > 1 )
+
+/* dulicate entereies will need to be removed in cleaning phase*/
+
+/* #3 find out how many rideable_types there are*/
+
+SELECT DISTINCT rideable_type
+FROM `hybrid-ridge-427702-q5.cyclist.cyclist_dataset_combined`;
+
+SELECT rideable_type, COUNT(rideable_type)
+FROM `hybrid-ridge-427702-q5.cyclist.cyclist_dataset_combined`
+GROUP BY rideable_type
+
+
+/* electric_bike, electric_scooter, classic_bike
+electric bike = 2924559 trips
+electric_scooter = 144337 trips
+classic_bike = 2785226 trips*/ 
+
+
+/* #4 Check started_at & ended_at column - only need entries that are longer than 1 minute and less than 1 day*/
+
+SELECT*
+FROM `hybrid-ridge-427702-q5.cyclist.cyclist_dataset_combined`
+WHERE
+  TIMESTAMP_DIFF(ended_at, started_at, MINUTE) <=1 OR
+  TIMESTAMP_DIFF(ended_at, started_at, MINUTE) >= 1440;
+
+/* 254679 enteries less than 1 minute and longer than 24 hours (1440 minutes.) These will be removed in cleaning phase*/
+
+/* #5 Check start_station_name and end_station_names*/
+
+SELECT start_station_name, count(*)
+FROM `hybrid-ridge-427702-q5.cyclist.cyclist_dataset_combined`
+GROUP BY start_station_name
+ORDER BY start_station_name;
+
+
+SELECT end_station_name, count(*)
+FROM `hybrid-ridge-427702-q5.cyclist.cyclist_dataset_combined`
+GROUP BY end_station_name
+ORDER BY end_station_name;
+
+/* end_station_name "NULL" most popular 109182 trips
+1750 end_station_names*/
+
+/* start_station_name "NULL" most popular 1056535 trips
+1738 star_station_names*/
+
+SELECT 
+  COUNT(DISTINCT(start_station_name)) AS unq_startname,
+  COUNT(DISTINCT(end_station_name)) AS unq_endname,
+  COUNT(DISTINCT(start_station_id)) AS unq_startid,
+  COUNT(DISTINCT(end_station_id)) AS unq_endid
+FROM `hybrid-ridge-427702-q5.cyclist.cyclist_dataset_combined`;
+
+/*unq_startname = 1737, unq_endname = 1749, unq_startid = 1700, unq_endid = 1710*/
+
+/* #6 count number of rides that are "NULL" in start_station_name, start_station_id, end_station_name, end_station_id*/
+
+SELECT count(*) as num_of_rides
+FROM `hybrid-ridge-427702-q5.cyclist.cyclist_dataset_combined`
+WHERE 
+  start_station_name IS NULL OR
+  start_station_id IS NULL OR
+  end_station_name IS NULL OR
+  end_station_id IS NULL;
+
+/* 1626328 enteries. 
+Classic_bikes will always start/stop on a docking station where electric_bikes and electric_scooters use their own locking system so don't necessiarly need to be at a station.
+- remove classic_bike rides that have a null in start/end as they should always be at a station 
+- change the "null" for electric_bike and electirc_scooters start/stop station "on_lock"
+
+/*#7. Check rows were latitude and longitude are null*/
+
+SELECT *
+FROM `hybrid-ridge-427702-q5.cyclist.cyclist_dataset_combined`
+WHERE start_lat IS NULL OR
+  start_lng IS NULL OR
+  end_lat IS NULL OR
+  end_lng IS NULL;
+
+/* there are 7441 trips that do not have a lat/long - these will be removed in cleaning process*/
+
+/*#8 check that there are only 2 memeber types*/
+
+SELECT DISTINCT member_casual
+FROM `hybrid-ridge-427702-q5.cyclist.cyclist_dataset_combined`
+
+/* there are only 2 types (member & casual)
+
