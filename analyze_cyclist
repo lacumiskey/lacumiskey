@@ -1,0 +1,101 @@
+/* type of rides*/
+
+CREATE TABLE cyclist.type_of_ride AS
+  SELECT rideable_type, member_casual, count(*) AS amount_of_rides
+   FROM `hybrid-ridge-427702-q5.cyclist.cyclist_dataset_cleaned`
+   GROUP BY rideable_type, member_casual
+   ORDER BY member_casual, amount_of_rides DESC
+
+/* amount of rides per month*/
+
+CREATE TABLE cyclist.rides_per_month AS
+  SELECT member_casual, month, count(*) AS num_of_rides
+  FROM `hybrid-ridge-427702-q5.cyclist.cyclist_dataset_cleaned`
+  GROUP BY member_casual, month
+
+/* amount of rides per day*/
+
+CREATE TABLE cyclist.rides_per_day AS
+  SELECT member_casual, day_of_week, count(*) AS num_of_rides
+  FROM `hybrid-ridge-427702-q5.cyclist.cyclist_dataset_cleaned`
+  GROUP BY member_casual, day_of_week
+
+/* amount of rides per hour*/ 
+
+CREATE TABLE cyclist.rides_per_hour AS
+  SELECT member_casual, EXTRACT(HOUR FROM started_at) AS time_of_day, count(*) AS num_of_rides
+  FROM `hybrid-ridge-427702-q5.cyclist.cyclist_dataset_cleaned`
+  GROUP BY time_of_day, member_casual
+
+/* average length of ride per day*/
+
+CREATE TABLE cyclist.avg_trip_length AS
+  SELECT member_casual, day_of_week, ROUND(AVG(duration_minutes), 0) AS avg_ride_time_minutes, AVG(AVG(duration_minutes)) OVER(PARTITION BY member_casual) AS combined_avg_ride_time
+  FROM `hybrid-ridge-427702-q5.cyclist.cyclist_dataset_cleaned`
+  GROUP BY member_casual, day_of_week;
+
+/* starting docking station location for casuals*/
+
+CREATE TABLE cyclist.start_station_casual AS
+  SELECT start_station_name, 
+  ROUND(AVG(start_lat), 4) AS start_lat,
+  ROUND(AVG(start_lng), 4) AS start_lng,
+  COUNT(*) AS num_of_rides
+  FROM `hybrid-ridge-427702-q5.cyclist.cyclist_dataset_cleaned`
+  WHERE member_casual = 'casual' AND start_station_name <> 'On Bike Lock'
+  GROUP BY start_station_name
+  ORDER BY num_of_rides DESC;
+
+/* starting docking station location for members*/
+
+CREATE TABLE cyclist.start_station_member AS
+  SELECT start_station_name, 
+  ROUND(AVG(start_lat), 4) AS start_lat,
+  ROUND(AVG(start_lng), 4) AS start_lng,
+  COUNT(*) AS num_of_rides
+  FROM `hybrid-ridge-427702-q5.cyclist.cyclist_dataset_cleaned`
+  WHERE member_casual = 'member' AND start_station_name <> 'On Bike Lock'
+  GROUP BY start_station_name
+  ORDER BY num_of_rides DESC;
+
+/* ending docking station location for casuals*/
+
+CREATE TABLE cyclist.end_station_casual AS
+  SELECT end_station_name, 
+  ROUND(AVG(start_lat), 4) AS start_lat,
+  ROUND(AVG(start_lng), 4) AS start_lng,
+  COUNT(*) AS num_of_rides
+  FROM `hybrid-ridge-427702-q5.cyclist.cyclist_dataset_cleaned`
+  WHERE member_casual = 'casual' AND end_station_name <> 'On Bike Lock'
+  GROUP BY end_station_name
+  ORDER BY num_of_rides DESC;
+
+/* ending docking station location for members*/
+
+CREATE TABLE cyclist.end_station_member AS
+  SELECT end_station_name, 
+  ROUND(AVG(start_lat), 4) AS start_lat,
+  ROUND(AVG(start_lng), 4) AS start_lng,
+  COUNT(*) AS num_of_rides
+  FROM `hybrid-ridge-427702-q5.cyclist.cyclist_dataset_cleaned`
+  WHERE member_casual = 'member' AND end_station_name <> 'On Bike Lock'
+  GROUP BY end_station_name
+  ORDER BY num_of_rides DESC;
+
+/* ending bike lock location for casuals*/
+
+CREATE TABLE cyclist.lock_location_casual AS
+  SELECT end_lat, end_lng, COUNT(*) AS num_of_rides
+  FROM `hybrid-ridge-427702-q5.cyclist.cyclist_dataset_cleaned`
+  WHERE member_casual = 'casual'
+  GROUP BY end_lat, end_lng
+  ORDER BY num_of_rides DESC;
+
+  /* ending bike lock location for members*/
+
+CREATE TABLE cyclist.lock_location_members AS
+  SELECT end_lat, end_lng, COUNT(*) AS num_of_rides
+  FROM `hybrid-ridge-427702-q5.cyclist.cyclist_dataset_cleaned`
+  WHERE member_casual = 'member'
+  GROUP BY end_lat, end_lng
+  ORDER BY num_of_rides DESC;
